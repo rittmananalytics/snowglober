@@ -21,3 +21,10 @@ SNOWFLAKE_DATABASE="<value>"
 SNOWFLAKE_SCHEMA="<value>"
 SNOWFLAKE_ROLE="<value>"
 ```
+
+## Unit tests
+To test the code, run
+
+```bash
+python tests/test_snowflake_connector.py
+```
