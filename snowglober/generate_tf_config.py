@@ -45,11 +45,7 @@ class TerraformConfigGenerator:
             resources.append(resource)
         return resources
 
-    # TODO: Implement more methods like _generate_warehouse_config for other resource types
-    # def _generate_user_config(self):
-    #     ...
-
-    def write_config_to_file(self):
+    def write_configs_to_files(self):
         # Create target directory if it doesn't exist
         os.makedirs('target', exist_ok=True)
 
