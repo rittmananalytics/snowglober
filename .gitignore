@@ -1,5 +1,5 @@
-.venv*
 *.egg-info*
 .env*
+.venv*
 __pycache__/
 target/
