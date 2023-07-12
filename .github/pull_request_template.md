@@ -1,6 +1,16 @@
-
-
 ## Description & motivation
+JIRA issue:
+
+## Detailed changes
+
+added
+* .
+
+changed
+* .
+
+removed
+* .
 
 ## Checklist
 - [ ] My pull request represents one story (logical piece of work).
