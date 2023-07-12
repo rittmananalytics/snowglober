@@ -38,6 +38,38 @@ class TerraformConfigGenerator:
             resources.append(resource)
         return resources
 
+    def _generate_users_config(self):
+        users = self.connector.get_all_users()
+        resources = []
+
+        for user in users:
+            resource = {
+                "type": "snowflake_user",
+                "name": user['name'],
+                "properties": {
+                    "name": user['name'],
+                    "login_name": user['login_name'],
+                    "comment": user['comment'],
+                    "disabled": user['disabled'].lower(),
+                    "display_name": user['display_name'],
+                    "email": user['email'],
+                    "first_name": user['first_name'],
+                    "last_name": user['last_name'],
+                    "default_warehouse": user['default_warehouse'],
+                    "default_role": user['default_role'],
+                    "must_change_password": user['must_change_password'].lower(),
+                }
+            }
+            # If optional fields 'default_namespace' and 'default_secondary_roles' are present, add them to properties
+            if user['default_namespace']:
+                resource["properties"]["default_namespace"] = user['default_namespace']
+            if user['default_secondary_roles']:
+                resource["properties"]["default_secondary_roles"] = user['default_secondary_roles']
+
+            resources.append(resource)
+        return resources
+
+
     def _generate_warehouses_config(self):
         warehouses = self.connector.get_all_warehouses()
         resources = []
@@ -69,6 +101,7 @@ class TerraformConfigGenerator:
         resources_to_generate = [
             {"resource_type": "databases", "generation_method": self._generate_databases_config},
             {"resource_type": "roles", "generation_method": self._generate_roles_config},
+            {"resource_type": "users", "generation_method": self._generate_users_config},
             {"resource_type": "warehouses", "generation_method": self._generate_warehouses_config},
         ]
 
