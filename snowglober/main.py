@@ -6,7 +6,7 @@ from generate_tf_config import TerraformConfigGenerator
 def main():
     connector = SnowflakeConnector()
     generator = TerraformConfigGenerator(connector)
-    generator.generate()
+    generator.write_config_to_file()
 
 if __name__ == "__main__":
     main()

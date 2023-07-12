@@ -39,6 +39,10 @@ class SnowflakeConnector:
     def get_all_databases(self):
         query = "show databases"
         return self._execute_query(query)
+    
+    def get_all_roles(self):
+        query = "show roles"
+        return self._execute_query(query)
 
     def get_all_users(self):
         query = "show users"
@@ -46,8 +50,4 @@ class SnowflakeConnector:
 
     def get_all_warehouses(self):
         query = "show warehouses"
-        return self._execute_query(query)
-    
-    def get_all_roles(self):
-        query = "show roles"
         return self._execute_query(query)
