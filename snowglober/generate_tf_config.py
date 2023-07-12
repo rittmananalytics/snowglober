@@ -5,6 +5,23 @@ class TerraformConfigGenerator:
     def __init__(self, connector):
         self.connector = connector
 
+    def _generate_database_config(self):
+        databases = self.connector.get_all_databases()
+        resources = []
+
+        for database in databases:
+            resource = {
+                "type": "snowflake_database",
+                "name": database['name'],
+                "properties": {
+                    "name": database['name'],
+                    "comment": database['comment'],
+                    "data_retention_time_in_days": database['retention_time']
+                }
+            }
+            resources.append(resource)
+        return resources
+
     def _generate_warehouse_config(self):
         warehouses = self.connector.get_all_warehouses()
         resources = []
@@ -38,9 +55,8 @@ class TerraformConfigGenerator:
 
         # List of resource types and corresponding config generation methods
         resources_to_generate = [
-            {"resource_type": "warehouse", "generation_method": self._generate_warehouse_config},
-            # Add more dictionary entries for other resource types like so:
-            # {"resource_type": "user", "generation_method": self._generate_user_config},
+            {"resource_type": "databases", "generation_method": self._generate_database_config},
+            {"resource_type": "warehouses", "generation_method": self._generate_warehouse_config},
         ]
 
         # Generate config for each resource type and write to file
