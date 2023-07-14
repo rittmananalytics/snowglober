@@ -18,7 +18,7 @@ pip install -e /path/to/snowglober/
 
 `.env` file at top of repo:
 ```bash
-SNOWFLAKE_USER="<value>"
+SNOWFLAKE_USERNAME="<value>"
 SNOWFLAKE_PASSWORD="<value>"
 SNOWFLAKE_ACCOUNT="<value>"
 SNOWFLAKE_WAREHOUSE="<value>"
