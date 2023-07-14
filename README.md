@@ -27,6 +27,20 @@ SNOWFLAKE_SCHEMA="<value>"
 SNOWFLAKE_ROLE="<value>"
 ```
 
+## Recommended `.gitignore`
+```.gitignore
+*.egg-info*
+.env*
+.venv*
+__pycache__/
+target/
+```
+
+## Run
+To run the code, run
+```bash
+python snowglober/main.py
+```
 ## Unit tests
 To test the code, run
 

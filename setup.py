@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='snowglober',
-    version='0.1.0',
+    version='0.2.0',
     author='Amir Jaber',
     author_email='amir@rittmananalytics.com',
     install_requires=[
