@@ -6,7 +6,7 @@ class TerraformConfigGenerator:
     def __init__(self, connector):
         self.connector = connector
 
-    def _generate_providers_config(self):
+    def generate_providers_config_file(self):
         print("Generating providers.tf...")
         config = textwrap.dedent("""\
         terraform {
@@ -29,6 +29,50 @@ class TerraformConfigGenerator:
 
         with open('target/providers.tf', 'w') as f:
             f.write(config)
+
+    def add_missing_environment_variables_to_tfvars_file(self):
+        print("Generating terraform.tfvars...")
+        variables = {
+            "snowflake_account": "",
+            "snowflake_role": "",
+            "snowflake_warehouse": "",
+            "snowflake_username": "",
+            "snowflake_password": "",
+        }
+        
+        # Update variables with values from environment variables
+        for key in variables:
+            env_value = os.environ.get(key.upper())
+            if env_value:
+                variables[key] = env_value
+        
+        existing_vars = {}
+        
+        # Read existing terraform.tfvars file
+        if os.path.exists('target/terraform.tfvars'):
+            with open('target/terraform.tfvars', 'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith("#"):  # Ignore blank lines and comments
+                        key, value = line.split("=", 1)
+                        existing_vars[key.strip()] = value.strip()
+
+        # Generate config string
+        config_lines = []
+        for key, value in variables.items():
+            if key not in existing_vars:  # Only add variables that are not already in the file
+                config_lines.append(f"{key} = \"{value}\"")
+
+        if not config_lines:  # No new variables to add
+            print("No new variables to add to terraform.tfvars.")
+            return
+
+        config = "\n".join(config_lines)
+
+        # Append to file
+        with open('target/terraform.tfvars', 'a') as f:
+            f.write("\n" + config)
 
     def _generate_resource_config_for_all_databases(self):
         print("Querying Snowflake for all databases...")
