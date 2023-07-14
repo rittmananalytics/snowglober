@@ -44,7 +44,8 @@ SNOWFLAKE_ROLE="<value>"
 .env*
 .venv*
 __pycache__/
-target/
+terraform.tfvars
+.terraform*
 ```
 
 ## Run
