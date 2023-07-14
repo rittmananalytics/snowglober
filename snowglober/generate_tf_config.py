@@ -6,6 +6,9 @@ class TerraformConfigGenerator:
     def __init__(self, connector):
         self.connector = connector
 
+        # Create target directory if it doesn't exist
+        os.makedirs('target', exist_ok=True)
+
     def generate_variables_tf_file(self):
         print("Generating variables.tf...")
         variables = [
@@ -188,8 +191,6 @@ class TerraformConfigGenerator:
         return resources
 
     def write_resource_configs_to_tf_files(self):
-        # Create target directory if it doesn't exist
-        os.makedirs('target', exist_ok=True)
 
         # List of resource types and corresponding config generation methods
         resources_to_generate = [
