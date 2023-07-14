@@ -6,7 +6,28 @@ class TerraformConfigGenerator:
     def __init__(self, connector):
         self.connector = connector
 
-    def generate_providers_config_file(self):
+    def generate_variables_tf_file(self):
+        print("Generating variables.tf...")
+        variables = [
+            "snowflake_account",
+            "snowflake_role",
+            "snowflake_warehouse",
+            "snowflake_username",
+            "snowflake_password",
+        ]
+        
+        # Generate config string
+        config_lines = []
+        for variable in variables:
+            config_lines.append(f"variable \"{variable}\" {{}}")
+            
+        config = "\n".join(config_lines)
+        
+        # Write to file
+        with open('target/variables.tf', 'w') as f:
+            f.write(config)
+
+    def generate_providers_tf_file(self):
         print("Generating providers.tf...")
         config = textwrap.dedent("""\
         terraform {
@@ -166,7 +187,7 @@ class TerraformConfigGenerator:
             resources.append(resource)
         return resources
 
-    def write_resource_configs_to_files(self):
+    def write_resource_configs_to_tf_files(self):
         # Create target directory if it doesn't exist
         os.makedirs('target', exist_ok=True)
 
