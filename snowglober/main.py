@@ -6,9 +6,11 @@ from generate_tf_config import TerraformConfigGenerator
 def main():
     connector = SnowflakeConnector()
     generator = TerraformConfigGenerator(connector)
-    generator.write_configs_to_files()
+    generator._generate_providers_config()
+    generator.write_resource_configs_to_files()
 
 if __name__ == "__main__":
     main()
+    print("Snowglober has successfully finished generating Terraform configs!")
 
 
