@@ -6,6 +6,17 @@ Inspired by the Medium article [Terraforming Snowflake (the Easy Way)](https://m
 This package is a WORK IN PROGRESS. It aims to automate migration of Snowflake instances to Terraform by performing the following tasks:
 1. extract all **objects** in **Snowflake** which map to a **Terraform** `resource`.
 2. create terraform files with resources made to map to each live object.
+# Usage
+## environment variables in `.tfvars` 
+Snowglober automates the creation of the `terraform.tfvars` file, which is used by Terraform for variable definitions. It generates this file using your existing environment variables. If a variable already exists in `terraform.tfvars`, Snowglober will not overwrite it.
+
+
+1. Ensure your environment variables match (case-insensitively) with the variables listed in the project's [Environment Variables](#environment-variables) section.
+
+2. Run Snowglober. It creates the `terraform.tfvars` file based on your environment variables.
+
+3. Run your usual Terraform commands. The `terraform.tfvars` file is automatically included in these commands, for example, when you run `terraform apply`.
+
 
 # Dev
 This package is open source in nature, under the MIT license. Anyone who wants to contribute is free to do so, just reach out!
