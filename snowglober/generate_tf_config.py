@@ -176,12 +176,12 @@ class TerraformConfigGenerator:
                     "name": warehouse['name'],
                     "comment": warehouse['comment'],
                     "warehouse_size": warehouse['size'],
-                    "auto_suspend_minutes": warehouse['auto_suspend'],
-                    "auto_resume": warehouse['auto_resume'].lower(),
-                    "initially_suspended": warehouse['state'].upper() == 'SUSPENDED',
-                    "scaling_policy": warehouse['scaling_policy'],
-                    "min_cluster_count": warehouse['min_cluster_count'],
-                    "max_cluster_count": warehouse['max_cluster_count']
+                    "auto_suspend": int(warehouse['auto_suspend']),
+                    "auto_resume": str(warehouse['auto_resume'].lower() == 'true').lower(),
+                "initially_suspended": str(warehouse['state'].upper() == 'SUSPENDED').lower(),
+                "scaling_policy": warehouse['scaling_policy'],
+                "min_cluster_count": int(warehouse['min_cluster_count']),
+                "max_cluster_count": int(warehouse['max_cluster_count'])
                 }
             }
             resources.append(resource)
