@@ -1,10 +1,12 @@
 import json
 import os
+import subprocess
 import textwrap
 
 class TerraformConfigGenerator:
     def __init__(self, connector):
         self.connector = connector
+        self.resource_mapping = {}  # This will hold the mapping between Terraform resource names and cloud IDs
 
         # Create target directory if it doesn't exist
         os.makedirs('target', exist_ok=True)
@@ -30,6 +32,8 @@ class TerraformConfigGenerator:
         with open('target/variables.tf', 'w') as f:
             f.write(config)
 
+        print("Generating variables.tf...done")
+
     def generate_providers_tf_file(self):
         print("Generating providers.tf...")
         config = textwrap.dedent("""\
@@ -53,6 +57,8 @@ class TerraformConfigGenerator:
 
         with open('target/providers.tf', 'w') as f:
             f.write(config)
+
+        print("Generating providers.tf...done")
 
     def add_missing_environment_variables_to_tfvars_file(self):
         print("Generating terraform.tfvars...")
@@ -87,6 +93,8 @@ class TerraformConfigGenerator:
         for key, value in variables.items():
             if key not in existing_vars:  # Only add variables that are not already in the file
                 config_lines.append(f"{key} = \"{value}\"")
+                print(f"Added this environment variable to terraform.tfvars (only name shown): " + key)
+
 
         if not config_lines:  # No new variables to add
             print("No new variables to add to terraform.tfvars.")
@@ -101,6 +109,8 @@ class TerraformConfigGenerator:
     def _generate_resource_config_for_all_databases(self):
         print("Querying Snowflake for all databases...")
         databases = self.connector.get_all_databases()
+        print("Querying Snowflake for all databases...done")
+
         resources = []
 
         for database in databases:
@@ -119,6 +129,8 @@ class TerraformConfigGenerator:
     def _generate_resource_config_for_all_roles(self):
         print("Querying Snowflake for all roles...")
         roles = self.connector.get_all_roles()
+        print("Querying Snowflake for all roles...done")
+
         resources = []
 
         for role in roles:
@@ -136,6 +148,8 @@ class TerraformConfigGenerator:
     def _generate_resource_config_for_all_users(self):
         print("Querying Snowflake for all users...")
         users = self.connector.get_all_users()
+        print("Querying Snowflake for all users...done")
+
         resources = []
 
         for user in users:
@@ -163,12 +177,19 @@ class TerraformConfigGenerator:
                 resource["properties"]["default_secondary_roles"] = user['default_secondary_roles']
 
             resources.append(resource)
+
+            # Add to resource mapping for terraform import
+            tf_resource_name = f"{resource['type']}.{resource['name']}"
+            self.resource_mapping[tf_resource_name] = user['name']  # Assuming the 'name' property of user is the cloud ID
+
         return resources
 
 
     def _generate_resource_config_for_all_warehouses(self):
         print("Querying Snowflake for all warehouses...")
         warehouses = self.connector.get_all_warehouses()
+        print("Querying Snowflake for all warehouses...done")
+
         resources = []
 
         for warehouse in warehouses:
@@ -210,3 +231,17 @@ class TerraformConfigGenerator:
                     for property, value in resource["properties"].items():
                         f.write("    {} = \"{}\"\n".format(property, value))
                     f.write("}\n\n")
+            print(f'Generating config for {resource_info["resource_type"]} at target/{resource_info["resource_type"]}.tf...done')
+
+    def import_resources(self):
+        # Delete existing .tfstate file if it exists
+        tfstate_file_path = 'target/terraform.tfstate'
+        if os.path.exists(tfstate_file_path):
+            os.remove(tfstate_file_path)
+            print(f"Deleted existing {tfstate_file_path} file.")
+
+        # Import resources into Terraform state
+        print("Importing resources into Terraform state...")
+        for resource_name, resource_id in self.resource_mapping.items():
+            subprocess.run(["terraform", "-chdir=target", "import", resource_name, resource_id], check=True)
+        print("Importing resources into Terraform state...done")

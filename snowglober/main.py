@@ -10,6 +10,7 @@ def main():
     generator.generate_providers_tf_file()
     generator.add_missing_environment_variables_to_tfvars_file()
     generator.write_resource_configs_to_tf_files()
+    generator.import_resources()
 
 if __name__ == "__main__":
     main()
