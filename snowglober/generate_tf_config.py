@@ -178,6 +178,10 @@ class TerraformConfigGenerator:
 
         for user in users:
 
+            # Don't generate config for "SNOWFLAKE"; a user that's setup by Snowflake for accessing the system stats
+            if user['name'].upper() == 'SNOWFLAKE':
+                continue
+
             resource = {
                 "type": "snowflake_user",
                 "name": user['name'],
