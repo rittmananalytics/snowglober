@@ -134,7 +134,13 @@ class TerraformConfigGenerator:
                     "name": database['name'],
                 }
             }
+
             resources.append(resource)
+
+            # Add to resource mapping for terraform import
+            tf_resource_name = f"{resource['type']}.{resource['name']}"
+            self.resource_mapping[tf_resource_name] = database['name']  # Assuming the 'name' property of database is the cloud ID
+
         return resources
 
     def _generate_resource_config_for_all_roles(self):
@@ -153,7 +159,13 @@ class TerraformConfigGenerator:
                     "name": role['name'],
                 }
             }
+
             resources.append(resource)
+        
+            # Add to resource mapping for terraform import
+            tf_resource_name = f"{resource['type']}.{resource['name']}"
+            self.resource_mapping[tf_resource_name] = role['name']  # Assuming the 'name' property of role is the cloud ID
+
         return resources
 
     def _generate_resource_config_for_all_users(self):
@@ -205,7 +217,13 @@ class TerraformConfigGenerator:
                     "name": warehouse['name'],
                 }
             }
+
             resources.append(resource)
+        
+            # Add to resource mapping for terraform import
+            tf_resource_name = f"{resource['type']}.{resource['name']}"
+            self.resource_mapping[tf_resource_name] = warehouse['name']  # Assuming the 'name' property of warehouse is the cloud ID
+
         return resources
 
     def write_resource_configs_to_tf_files(self):
@@ -255,6 +273,19 @@ class TerraformConfigGenerator:
                 "default_secondary_roles", "default_warehouse", "disabled",
                 "display_name", "email", "first_name", "last_name", "login_name",
                 "must_change_password", "password", "rsa_public_key", "rsa_public_key_2"
+            ],
+            "snowflake_database": [
+                "name", "comment", "data_retention_time_in_days", "from_database", "from_replica", 
+                "from_share", "is_transient", "replication_configuration"
+            ],
+            "snowflake_role": [
+                "name", "comment"
+            ],
+            "snowflake_warehouse": [
+                "name", "auto_resume", "auto_suspend", "comment", "initially_suspended", 
+                "max_cluster_count", "max_concurrency_level", "min_cluster_count", "resource_monitor", 
+                "scaling_policy", "statement_queued_timeout_in_seconds", "statement_timeout_in_seconds", 
+                "wait_for_provisioning", "warehouse_size"
             ]
         }
 
