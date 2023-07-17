@@ -12,6 +12,7 @@ class TerraformConfigGenerator:
         os.makedirs('target', exist_ok=True)
 
     def generate_variables_tf_file(self):
+
         print("Generating variables.tf...")
         variables = [
             "snowflake_account",
@@ -35,6 +36,7 @@ class TerraformConfigGenerator:
         print("Generating variables.tf...done")
 
     def generate_providers_tf_file(self):
+
         print("Generating providers.tf...")
         config = textwrap.dedent("""\
         terraform {
@@ -61,6 +63,7 @@ class TerraformConfigGenerator:
         print("Generating providers.tf...done")
 
     def add_missing_environment_variables_to_tfvars_file(self):
+
         print("Generating terraform.tfvars...")
         variables = {
             "snowflake_account": "",
@@ -107,6 +110,7 @@ class TerraformConfigGenerator:
             f.write("\n" + config)
 
     def _generate_resource_config_for_all_databases(self):
+
         print("Querying Snowflake for all databases...")
         databases = self.connector.get_all_databases()
         print("Querying Snowflake for all databases...done")
@@ -119,14 +123,13 @@ class TerraformConfigGenerator:
                 "name": database['name'],
                 "properties": {
                     "name": database['name'],
-                    "comment": database['comment'],
-                    "data_retention_time_in_days": database['retention_time']
                 }
             }
             resources.append(resource)
         return resources
 
     def _generate_resource_config_for_all_roles(self):
+
         print("Querying Snowflake for all roles...")
         roles = self.connector.get_all_roles()
         print("Querying Snowflake for all roles...done")
@@ -139,13 +142,13 @@ class TerraformConfigGenerator:
                 "name": role['name'],
                 "properties": {
                     "name": role['name'],
-                    "comment": role['comment']
                 }
             }
             resources.append(resource)
         return resources
 
     def _generate_resource_config_for_all_users(self):
+
         print("Querying Snowflake for all users...")
         users = self.connector.get_all_users()
         print("Querying Snowflake for all users...done")
@@ -159,15 +162,6 @@ class TerraformConfigGenerator:
                 "properties": {
                     "name": user['name'],
                     "login_name": user['login_name'],
-                    "comment": user['comment'],
-                    "disabled": user['disabled'].lower(),
-                    "display_name": user['display_name'],
-                    "email": user['email'],
-                    "first_name": user['first_name'],
-                    "last_name": user['last_name'],
-                    "default_warehouse": user['default_warehouse'],
-                    "default_role": user['default_role'],
-                    "must_change_password": user['must_change_password'].lower(),
                 }
             }
             # If optional fields 'default_namespace' and 'default_secondary_roles' are present, add them to properties
@@ -186,6 +180,7 @@ class TerraformConfigGenerator:
 
 
     def _generate_resource_config_for_all_warehouses(self):
+
         print("Querying Snowflake for all warehouses...")
         warehouses = self.connector.get_all_warehouses()
         print("Querying Snowflake for all warehouses...done")
@@ -198,14 +193,6 @@ class TerraformConfigGenerator:
                 "name": warehouse['name'],
                 "properties": {
                     "name": warehouse['name'],
-                    "comment": warehouse['comment'],
-                    "warehouse_size": warehouse['size'],
-                    "auto_suspend": int(warehouse['auto_suspend']),
-                    "auto_resume": str(warehouse['auto_resume'].lower() == 'true').lower(),
-                "initially_suspended": str(warehouse['state'].upper() == 'SUSPENDED').lower(),
-                "scaling_policy": warehouse['scaling_policy'],
-                "min_cluster_count": int(warehouse['min_cluster_count']),
-                "max_cluster_count": int(warehouse['max_cluster_count'])
                 }
             }
             resources.append(resource)
@@ -241,6 +228,7 @@ class TerraformConfigGenerator:
         print("Running terraform init...done")
 
     def import_resources(self):
+
         # Delete existing .tfstate file if it exists
         tfstate_file_path = 'target/terraform.tfstate'
         if os.path.exists(tfstate_file_path):
