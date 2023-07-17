@@ -233,6 +233,13 @@ class TerraformConfigGenerator:
                     f.write("}\n\n")
             print(f'Generating config for {resource_info["resource_type"]} at target/{resource_info["resource_type"]}.tf...done')
 
+    def run_terraform_init(self):
+
+        # Run terraform init
+        print("Running terraform init...")
+        subprocess.run(["terraform", "-chdir=target", "init"], check=True)
+        print("Running terraform init...done")
+
     def import_resources(self):
         # Delete existing .tfstate file if it exists
         tfstate_file_path = 'target/terraform.tfstate'
