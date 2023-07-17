@@ -7,7 +7,7 @@ class SnowflakeConnector:
 
     def __init__(self):
         load_dotenv()
-        self.user = os.getenv('SNOWFLAKE_USER')
+        self.user = os.getenv('SNOWFLAKE_USERNAME')
         self.password = os.getenv('SNOWFLAKE_PASSWORD')
         self.account = os.getenv('SNOWFLAKE_ACCOUNT')
         self.warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
