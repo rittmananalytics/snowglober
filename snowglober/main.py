@@ -12,6 +12,7 @@ def main():
     generator.write_resource_configs_to_tf_files()
     generator.run_terraform_init()
     generator.import_resources()
+    generator.update_tf_files_with_optional_properties()
 
 if __name__ == "__main__":
     main()

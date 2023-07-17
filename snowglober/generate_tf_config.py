@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import textwrap
 
@@ -10,6 +11,14 @@ class TerraformConfigGenerator:
 
         # Create target directory if it doesn't exist
         os.makedirs('target', exist_ok=True)
+
+        # Define resources_to_generate as an instance attribute
+        self.resources_to_generate = [
+            {"resource_type": "snowflake_database", "file_name": "databases", "generation_method": self._generate_resource_config_for_all_databases},
+            {"resource_type": "snowflake_role", "file_name": "roles", "generation_method": self._generate_resource_config_for_all_roles},
+            {"resource_type": "snowflake_user", "file_name": "users", "generation_method": self._generate_resource_config_for_all_users},
+            {"resource_type": "snowflake_warehouse", "file_name": "warehouses", "generation_method": self._generate_resource_config_for_all_warehouses},
+        ]
 
     def generate_variables_tf_file(self):
 
@@ -156,6 +165,7 @@ class TerraformConfigGenerator:
         resources = []
 
         for user in users:
+
             resource = {
                 "type": "snowflake_user",
                 "name": user['name'],
@@ -200,25 +210,20 @@ class TerraformConfigGenerator:
 
     def write_resource_configs_to_tf_files(self):
 
-        # List of resource types and corresponding config generation methods
-        resources_to_generate = [
-            {"resource_type": "databases", "generation_method": self._generate_resource_config_for_all_databases},
-            {"resource_type": "roles", "generation_method": self._generate_resource_config_for_all_roles},
-            {"resource_type": "users", "generation_method": self._generate_resource_config_for_all_users},
-            {"resource_type": "warehouses", "generation_method": self._generate_resource_config_for_all_warehouses},
-        ]
-
         # Generate config for each resource type and write to file
-        for resource_info in resources_to_generate:
+        for resource_info in self.resources_to_generate:
             config = resource_info["generation_method"]()
-            print(f'Generating config for {resource_info["resource_type"]} at target/{resource_info["resource_type"]}.tf...')
-            with open(f'target/{resource_info["resource_type"]}.tf', 'w') as f:
+
+            print(f'Generating config for {resource_info["file_name"]} at target/{resource_info["file_name"]}.tf...')
+            
+            with open(f'target/{resource_info["file_name"]}.tf', 'w') as f:
                 for resource in config:
                     f.write("resource \"{}\" \"{}\" {{\n".format(resource["type"], resource["name"]))
                     for property, value in resource["properties"].items():
                         f.write("    {} = \"{}\"\n".format(property, value))
                     f.write("}\n\n")
-            print(f'Generating config for {resource_info["resource_type"]} at target/{resource_info["resource_type"]}.tf...done')
+            
+            print(f'Generating config for {resource_info["file_name"]} at target/{resource_info["file_name"]}.tf...done')
 
     def run_terraform_init(self):
 
@@ -240,3 +245,73 @@ class TerraformConfigGenerator:
         for resource_name, resource_id in self.resource_mapping.items():
             subprocess.run(["terraform", "-chdir=target", "import", resource_name, resource_id], check=True)
         print("Importing resources into Terraform state...done")
+
+    def update_tf_files_with_optional_properties(self):
+
+        # Define the valid properties for each resource type
+        valid_properties = {
+            "snowflake_user": [
+                "name", "comment", "default_namespace", "default_role",
+                "default_secondary_roles", "default_warehouse", "disabled",
+                "display_name", "email", "first_name", "last_name", "login_name",
+                "must_change_password", "password", "rsa_public_key", "rsa_public_key_2"
+            ]
+        }
+
+        # Check if .tfstate file exists
+        tfstate_file_path = 'target/terraform.tfstate'
+        if not os.path.exists(tfstate_file_path):
+            print("No .tfstate file found. Run 'import_resources' first.")
+            return
+
+        print("Updating .tf files with optional properties...")
+
+        # Load .tfstate file
+        with open(tfstate_file_path, 'r') as f:
+            tfstate_content = json.load(f)
+
+        # Loop through each resource type
+        for resource_info in self.resources_to_generate:
+            tf_file_path = f'target/{resource_info["file_name"]}.tf'
+
+            if not os.path.exists(tf_file_path):
+                print(f'No .tf file found for {resource_info["file_name"]}. Skipping.')
+                continue
+
+            with open(tf_file_path, 'r') as f:
+                tf_file_content = f.readlines()
+
+            for resource in tfstate_content['resources']:
+                if resource_info["resource_type"] == resource['type']:
+                    for instance in resource['instances']:
+                        instance_attributes = instance['attributes']
+
+                        # Use regular expressions to match the resource line in the .tf file.
+                        resource_type = resource['type']
+                        resource_line_num = next((i for i, line in enumerate(tf_file_content) if re.match(f'resource "{resource_type}" "{instance_attributes["name"]}" {{', line.strip())), None)
+                        
+                        if resource_line_num is None:
+                            print(f"Could not find resource {resource['type']} {instance_attributes['name']} in {tf_file_path}. Skipping.")
+                            continue
+
+                        # Find the line number of the closing bracket for this resource
+                        resource_end_line_num = next((i for i, line in enumerate(tf_file_content[resource_line_num+1:], start=resource_line_num+1) if '}' in line), len(tf_file_content))
+
+                        for key, value in instance_attributes.items():
+                            if key not in valid_properties.get(resource_type, []):  # Check if the property is valid
+                                continue
+                            if value is None or (isinstance(value, list) and len(value) == 0):  # Skip properties with 'null' or empty array as value
+                                continue
+                            if not any(key in line for line in tf_file_content[resource_line_num:resource_end_line_num]):
+                                if isinstance(value, bool):
+                                    tf_file_content.insert(resource_end_line_num, f'    {key} = {str(value).lower()}\n')  # no quotes around boolean values
+                                elif isinstance(value, list):
+                                    tf_file_content.insert(resource_end_line_num, f'    {key} = {value}\n')  # no quotes around array values
+                                else:
+                                    tf_file_content.insert(resource_end_line_num, f'    {key} = "{value}"\n')
+                                resource_end_line_num += 1  # increment the end line num to keep up with the added lines
+
+            with open(tf_file_path, 'w') as f:
+                f.writelines(tf_file_content)
+
+        print("Updating .tf files with optional properties...done")
