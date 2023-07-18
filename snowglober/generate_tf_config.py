@@ -5,9 +5,16 @@ import subprocess
 import textwrap
 
 class TerraformConfigGenerator:
+
     def __init__(self, connector):
         self.connector = connector
         self.resource_mapping = {}  # This will hold the mapping between Terraform resource names and cloud IDs
+
+        # Define common file paths
+        self.tfstate_file_path = 'target/terraform.tfstate'
+        self.tfvars_file_path = 'target/terraform.tfvars'
+        self.tf_variables_file_path = 'target/variables.tf'
+        self.tf_providers_file_path = 'target/providers.tf'
 
         # Create target directory if it doesn't exist
         os.makedirs('target', exist_ok=True)
@@ -74,7 +81,7 @@ class TerraformConfigGenerator:
         config = "\n".join(config_lines)
         
         # Write to file
-        with open('target/variables.tf', 'w') as f:
+        with open(self.tf_variables_file_path, 'w') as f:
             f.write(config)
 
         print("Generating variables.tf...done")
@@ -101,7 +108,7 @@ class TerraformConfigGenerator:
         }
         """)
 
-        with open('target/providers.tf', 'w') as f:
+        with open(self.tf_providers_file_path, 'w') as f:
             f.write(config)
 
         print("Generating providers.tf...done")
@@ -126,8 +133,8 @@ class TerraformConfigGenerator:
         existing_vars = {}
         
         # Read existing terraform.tfvars file
-        if os.path.exists('target/terraform.tfvars'):
-            with open('target/terraform.tfvars', 'r') as f:
+        if os.path.exists(self.tfvars_file_path):
+            with open(self.tfvars_file_path, 'r') as f:
                 lines = f.readlines()
                 for line in lines:
                     line = line.strip()
@@ -150,7 +157,7 @@ class TerraformConfigGenerator:
         config = "\n".join(config_lines)
 
         # Append to file
-        with open('target/terraform.tfvars', 'a') as f:
+        with open(self.tfvars_file_path, 'a') as f:
             f.write("\n" + config)
 
     def _generate_resource_config_for_all_databases(self):
@@ -236,10 +243,9 @@ class TerraformConfigGenerator:
     def import_resources(self):
 
         # Delete existing .tfstate file if it exists
-        tfstate_file_path = 'target/terraform.tfstate'
-        if os.path.exists(tfstate_file_path):
-            os.remove(tfstate_file_path)
-            print(f"Deleted existing {tfstate_file_path} file.")
+        if os.path.exists(self.tfstate_file_path):
+            os.remove(self.tfstate_file_path)
+            print(f"Deleted existing {self.tfstate_file_path} file.")
 
         # Import resources into Terraform state
         print("Importing resources into Terraform state...")
@@ -250,15 +256,14 @@ class TerraformConfigGenerator:
     def update_tf_files_with_optional_properties(self):
 
         # Check if .tfstate file exists
-        tfstate_file_path = 'target/terraform.tfstate'
-        if not os.path.exists(tfstate_file_path):
+        if not os.path.exists(self.tfstate_file_path):
             print("No .tfstate file found. Run 'import_resources' first.")
             return
 
         print("Updating .tf files with optional properties...")
 
         # Load .tfstate file
-        with open(tfstate_file_path, 'r') as f:
+        with open(self.tfstate_file_path, 'r') as f:
             tfstate_content = json.load(f)
 
         # Loop through each resource type
