@@ -291,13 +291,16 @@ class TerraformConfigGenerator:
                         # Find the line number of the closing bracket for this resource
                         resource_end_line_num = next((i for i, line in enumerate(tf_file_content[resource_line_num+1:], start=resource_line_num+1) if '}' in line), len(tf_file_content))
 
+                        # Loop through each property in the .tfstate and add it to the .tf file if it doesn't already exist
                         for key, value in instance_attributes.items():
                             if key not in self.valid_properties.get(resource_type, {}).get('optional_properties', []):  # Check if the property is valid
                                 continue
-                            if value is None or (isinstance(value, list) and len(value) == 0):  # Skip properties with 'null' or empty array as value
+                            if isinstance(value, list) and len(value) == 0:  # Skip properties with empty array as value
                                 continue
                             if not any(key in line for line in tf_file_content[resource_line_num:resource_end_line_num]):
-                                if isinstance(value, bool):
+                                if value is None:
+                                    tf_file_content.insert(resource_end_line_num, f'    {key} = null\n')
+                                elif isinstance(value, bool):
                                     tf_file_content.insert(resource_end_line_num, f'    {key} = {str(value).lower()}\n')  # no quotes around boolean values
                                 elif isinstance(value, list):
                                     tf_file_content.insert(resource_end_line_num, f'    {key} = {value}\n')  # no quotes around array values
