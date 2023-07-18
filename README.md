@@ -17,7 +17,14 @@ Snowglober automates the creation of the `terraform.tfvars` file, which is used 
 
 3. Run your usual Terraform commands. The `terraform.tfvars` file is automatically included in these commands, for example, when you run `terraform apply`.
 
-
+# Architecture
+snowglober's `.tf` file generation workflow
+1. set up `provider` and `variable` files; **variables** contain **creds** and are populated from `.env` vars
+1. query **snowflake** for all objects of each **resource type**
+1. generate `.tf` files with **resources** - at this stage only required properties are defined
+1. run `terraform import` for each resource
+1. extract remaining (and optional) properties from the generated `.tfstate` file
+1. update the **resources** in the `.tf` files with the remaining properties
 # Dev
 This package is open source in nature, under the MIT license. Anyone who wants to contribute is free to do so, just reach out!
 ## Install in dev mode
