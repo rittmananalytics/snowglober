@@ -14,10 +14,10 @@ class TerraformConfigGenerator:
 
         # Define resources_to_generate as an instance attribute
         self.resources_to_generate = [
-            {"resource_type": "snowflake_database", "file_name": "databases", "generation_method": self._generate_resource_config_for_all_databases},
-            {"resource_type": "snowflake_role", "file_name": "roles", "generation_method": self._generate_resource_config_for_all_roles},
-            {"resource_type": "snowflake_user", "file_name": "users", "generation_method": self._generate_resource_config_for_all_users},
-            {"resource_type": "snowflake_warehouse", "file_name": "warehouses", "generation_method": self._generate_resource_config_for_all_warehouses},
+            {"resource_type": "snowflake_database", "generation_method": self._generate_resource_config_for_all_databases},
+            {"resource_type": "snowflake_role", "generation_method": self._generate_resource_config_for_all_roles},
+            {"resource_type": "snowflake_user", "generation_method": self._generate_resource_config_for_all_users},
+            {"resource_type": "snowflake_warehouse", "generation_method": self._generate_resource_config_for_all_warehouses},
         ]
 
     def generate_variables_tf_file(self):
@@ -235,17 +235,18 @@ class TerraformConfigGenerator:
         # Generate config for each resource type and write to file
         for resource_info in self.resources_to_generate:
             config = resource_info["generation_method"]()
+            resource_type = resource_info["resource_type"]
 
-            print(f'Generating config for {resource_info["file_name"]} at target/{resource_info["file_name"]}.tf...')
+            print(f'Generating config for {resource_type} at target/{resource_type}.tf...')
             
-            with open(f'target/{resource_info["file_name"]}.tf', 'w') as f:
+            with open(f'target/{resource_type}.tf', 'w') as f:
                 for resource in config:
                     f.write("resource \"{}\" \"{}\" {{\n".format(resource["type"], resource["name"]))
                     for property, value in resource["properties"].items():
                         f.write("    {} = \"{}\"\n".format(property, value))
                     f.write("}\n\n")
             
-            print(f'Generating config for {resource_info["file_name"]} at target/{resource_info["file_name"]}.tf...done')
+            print(f'Generating config for {resource_type} at target/{resource_type}.tf...done')
 
     def run_terraform_init(self):
 
@@ -307,10 +308,13 @@ class TerraformConfigGenerator:
 
         # Loop through each resource type
         for resource_info in self.resources_to_generate:
-            tf_file_path = f'target/{resource_info["file_name"]}.tf'
+            
+            resource_type = resource_info["resource_type"]
+
+            tf_file_path = f'target/{resource_type}.tf'
 
             if not os.path.exists(tf_file_path):
-                print(f'No .tf file found for {resource_info["file_name"]}. Skipping.')
+                print(f'No .tf file found for {resource_type}. Skipping.')
                 continue
 
             with open(tf_file_path, 'r') as f:
