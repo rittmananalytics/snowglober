@@ -25,11 +25,12 @@ class TerraformConfigGenerator:
 
         # Define resources_to_generate as an instance attribute
         self.resources_to_generate = [
-            {"resource_type": "snowflake_database", "api_call": self.connector.get_all_databases},
-            {"resource_type": "snowflake_role", "api_call": self.connector.get_all_roles},
-            {"resource_type": "snowflake_user", "api_call": self.connector.get_all_users},
-            {"resource_type": "snowflake_warehouse", "api_call": self.connector.get_all_warehouses}
+            {"resource_type": "snowflake_database", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('databases')},
+            {"resource_type": "snowflake_role", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('roles')},
+            {"resource_type": "snowflake_user", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('users')},
+            {"resource_type": "snowflake_warehouse", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('warehouses')}
         ]
+
 
 
         # Define valid_properties for each resource type TODO RENAME DICT?

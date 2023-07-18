@@ -47,30 +47,20 @@ class SnowflakeConnector:
         finally:
             cur.close()
 
-    def get_all_databases(self):
+    def get_all_objects_of_a_resource_type(self, entity):
         """
-        This method returns a list of all databases in Snowflake.
+        This method returns a list of all instances of the specified entity in Snowflake.
+        The entity should be one of: databases, roles, users, warehouses.
         """
-        query = "show databases"
-        return self._execute_query(query)
-    
-    def get_all_roles(self):
-        """
-        This method returns a list of all roles in Snowflake.
-        """
-        query = "show roles"
-        return self._execute_query(query)
+        valid_entities = [
+            'databases',
+            'roles',
+            'users',
+            'warehouses',
+            ]
 
-    def get_all_users(self):
-        """
-        This method returns a list of all users in Snowflake.
-        """
-        query = "show users"
-        return self._execute_query(query)
+        if entity not in valid_entities:
+            raise ValueError(f"Invalid entity '{entity}'. Choose one of {valid_entities}")
 
-    def get_all_warehouses(self):
-        """
-        This method returns a list of all warehouses in Snowflake.
-        """
-        query = "show warehouses"
+        query = f"show {entity}"
         return self._execute_query(query)
