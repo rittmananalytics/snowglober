@@ -14,11 +14,12 @@ class TerraformConfigGenerator:
 
         # Define resources_to_generate as an instance attribute
         self.resources_to_generate = [
-            {"resource_type": "snowflake_database", "generation_method": self._generate_resource_config_for_all_databases},
-            {"resource_type": "snowflake_role", "generation_method": self._generate_resource_config_for_all_roles},
-            {"resource_type": "snowflake_user", "generation_method": self._generate_resource_config_for_all_users},
-            {"resource_type": "snowflake_warehouse", "generation_method": self._generate_resource_config_for_all_warehouses},
+            {"resource_type": "snowflake_database", "api_call": self.connector.get_all_databases},
+            {"resource_type": "snowflake_role", "api_call": self.connector.get_all_roles},
+            {"resource_type": "snowflake_user", "api_call": self.connector.get_all_users},
+            {"resource_type": "snowflake_warehouse", "api_call": self.connector.get_all_warehouses}
         ]
+
 
         # Define valid_properties for each resource type TODO RENAME DICT?
         self.valid_properties = {
@@ -173,81 +174,31 @@ class TerraformConfigGenerator:
 
         return resources
 
-    def _generate_resource_config_for_all_roles(self):
-
-        print("Querying Snowflake for all roles...")
-        roles = self.connector.get_all_roles()
-        print("Querying Snowflake for all roles...done")
-
-        resources = []
-        resource_type = "snowflake_role"
-
-        for role in roles:
-            resource = {
-                "type": resource_type,
-                "name": role['name'],
-                "properties": {key: role[key] for key in self.valid_properties[resource_type]["required_properties"] if key in role}
-            }
-
-            resources.append(resource)
-        
-            # Add to resource mapping for terraform import
-            tf_resource_name = f"{resource['type']}.{resource['name']}"
-            self.resource_mapping[tf_resource_name] = role['name']  # Assuming the 'name' property of role is the cloud ID
-
-        return resources
-
-    def _generate_resource_config_for_all_users(self):
-
-        print("Querying Snowflake for all users...")
-        users = self.connector.get_all_users()
-        print("Querying Snowflake for all users...done")
+    def _generate_resource_config_for_all_objects_of_a_resource_type(self, resource_type, get_all_func):
+    
+        print(f"Querying Snowflake for all {resource_type}s...")
+        all_resources = get_all_func()
+        print(f"Querying Snowflake for all {resource_type}s...done")
 
         resources = []
-        resource_type = "snowflake_user"
 
-        for user in users:
+        for resource in all_resources:
 
-            # Don't generate config for any user in ignore_names
-            if user['name'].upper() in map(str.upper, self.valid_properties[resource_type]["ignore_names"]):
+            # Don't generate config for any resource in ignore_names
+            if resource['name'].upper() in map(str.upper, self.valid_properties[resource_type]["ignore_names"]):
                 continue
 
-            resource = {
+            config_resource = {
                 "type": resource_type,
-                "name": user['name'],
-                "properties": {key: user[key] for key in self.valid_properties[resource_type]["required_properties"] if key in user}
+                "name": resource['name'],
+                "properties": {key: resource[key] for key in self.valid_properties[resource_type]["required_properties"] if key in resource}
             }
 
-            resources.append(resource)
+            resources.append(config_resource)
 
             # Add to resource mapping for terraform import
-            tf_resource_name = f"{resource['type']}.{resource['name']}"
-            self.resource_mapping[tf_resource_name] = user['name']  # Assuming the 'name' property of user is the cloud ID
-
-        return resources
-
-
-    def _generate_resource_config_for_all_warehouses(self):
-
-        print("Querying Snowflake for all warehouses...")
-        warehouses = self.connector.get_all_warehouses()
-        print("Querying Snowflake for all warehouses...done")
-
-        resources = []
-        resource_type = "snowflake_warehouse"
-
-        for warehouse in warehouses:
-            resource = {
-                "type": resource_type,
-                "name": warehouse['name'],
-                "properties": {key: warehouse[key] for key in self.valid_properties[resource_type]["required_properties"] if key in warehouse}
-            }
-
-            resources.append(resource)
-        
-            # Add to resource mapping for terraform import
-            tf_resource_name = f"{resource['type']}.{resource['name']}"
-            self.resource_mapping[tf_resource_name] = warehouse['name']  # Assuming the 'name' property of warehouse is the cloud ID
+            tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
+            self.resource_mapping[tf_resource_name] = resource['name']  # Assuming the 'name' property of resource is the cloud ID
 
         return resources
 
@@ -255,8 +206,11 @@ class TerraformConfigGenerator:
 
         # Generate config for each resource type and write to file
         for resource_info in self.resources_to_generate:
-            config = resource_info["generation_method"]()
             resource_type = resource_info["resource_type"]
+            api_call = resource_info["api_call"]
+
+            # Call the new method with the resource type and the function to get the resource
+            config = self._generate_resource_config_for_all_objects_of_a_resource_type(resource_type, api_call)
 
             print(f'Generating config for {resource_type} at target/{resource_type}.tf...')
             
