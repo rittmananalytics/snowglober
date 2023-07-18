@@ -20,16 +20,18 @@ class TerraformConfigGenerator:
             {"resource_type": "snowflake_warehouse", "generation_method": self._generate_resource_config_for_all_warehouses},
         ]
 
-        # Define valid_properties for each resource type
+        # Define valid_properties for each resource type TODO RENAME DICT?
         self.valid_properties = {
             "snowflake_database": {
                 "required_properties": ["name"],
                 "optional_properties": ["comment", "data_retention_time_in_days", "from_database", 
                                         "from_replica", "from_share", "is_transient", "replication_configuration",],
+                "ignore_names": [],
             },
             "snowflake_role": {
                 "required_properties": ["name",],
                 "optional_properties": ["comment",],
+                "ignore_names": [],
             },
             "snowflake_user": {
                 "required_properties": ["name", "login_name"],
@@ -37,6 +39,7 @@ class TerraformConfigGenerator:
                                         "default_warehouse", "disabled", "display_name", "email", 
                                         "first_name", "last_name", "must_change_password", 
                                         "password", "rsa_public_key", "rsa_public_key_2",],
+                "ignore_names": ["SNOWFLAKE"],
             },
             "snowflake_warehouse": {
                 "required_properties": ["name",],
@@ -44,6 +47,7 @@ class TerraformConfigGenerator:
                                         "max_cluster_count", "max_concurrency_level", "min_cluster_count", 
                                         "resource_monitor", "scaling_policy", "statement_queued_timeout_in_seconds", 
                                         "statement_timeout_in_seconds", "wait_for_provisioning", "warehouse_size",],
+                "ignore_names": [],
             }
         }
 
@@ -204,8 +208,8 @@ class TerraformConfigGenerator:
 
         for user in users:
 
-            # Don't generate config for "SNOWFLAKE"; a user that's setup by Snowflake for accessing the system stats
-            if user['name'].upper() == 'SNOWFLAKE':
+            # Don't generate config for any user in ignore_names
+            if user['name'].upper() in map(str.upper, self.valid_properties[resource_type]["ignore_names"]):
                 continue
 
             resource = {
@@ -213,11 +217,6 @@ class TerraformConfigGenerator:
                 "name": user['name'],
                 "properties": {key: user[key] for key in self.valid_properties[resource_type]["required_properties"] if key in user}
             }
-            # If optional fields 'default_namespace' and 'default_secondary_roles' are present, add them to properties
-            if user['default_namespace']:
-                resource["properties"]["default_namespace"] = user['default_namespace']
-            if user['default_secondary_roles']:
-                resource["properties"]["default_secondary_roles"] = user['default_secondary_roles']
 
             resources.append(resource)
 
