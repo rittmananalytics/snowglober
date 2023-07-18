@@ -26,29 +26,32 @@ class TerraformConfigGenerator:
             "snowflake_database": {
                 "required_properties": ["name"],
                 "optional_properties": ["comment", "data_retention_time_in_days", "from_database", 
-                                        "from_replica", "from_share", "is_transient", "replication_configuration",],
-                "ignore_names": [],
+                                        "from_replica", "from_share", "is_transient", "replication_configuration",
+                                        "from_database", "is_transient",],
+                "names_to_ignore": [],
             },
             "snowflake_role": {
                 "required_properties": ["name",],
                 "optional_properties": ["comment",],
-                "ignore_names": [],
+                "names_to_ignore": [],
             },
             "snowflake_user": {
                 "required_properties": ["name", "login_name"],
                 "optional_properties": ["comment", "default_namespace", "default_role", "default_secondary_roles", 
                                         "default_warehouse", "disabled", "display_name", "email", 
                                         "first_name", "last_name", "must_change_password", 
-                                        "password", "rsa_public_key", "rsa_public_key_2",],
-                "ignore_names": ["SNOWFLAKE"],
+                                        "password", "rsa_public_key", "rsa_public_key_2", "tag",],
+                "names_to_ignore": ["SNOWFLAKE"],
             },
             "snowflake_warehouse": {
                 "required_properties": ["name",],
                 "optional_properties": ["auto_resume", "auto_suspend", "comment", "initially_suspended", 
                                         "max_cluster_count", "max_concurrency_level", "min_cluster_count", 
                                         "resource_monitor", "scaling_policy", "statement_queued_timeout_in_seconds", 
-                                        "statement_timeout_in_seconds", "wait_for_provisioning", "warehouse_size",],
-                "ignore_names": [],
+                                        "statement_timeout_in_seconds", "wait_for_provisioning", "warehouse_size",
+                                        "enable_query_acceleration", "query_acceleration_max_scale_factor",
+                                        "warehouse_type",],
+                "names_to_ignore": [],
             }
         }
 
@@ -184,8 +187,8 @@ class TerraformConfigGenerator:
 
         for resource in all_resources:
 
-            # Don't generate config for any resource in ignore_names
-            if resource['name'].upper() in map(str.upper, self.valid_properties[resource_type]["ignore_names"]):
+            # Don't generate config for any resource in names_to_ignore
+            if resource['name'].upper() in map(str.upper, self.valid_properties[resource_type]["names_to_ignore"]):
                 continue
 
             config_resource = {
