@@ -7,6 +7,10 @@ import textwrap
 class TerraformConfigGenerator:
 
     def __init__(self, connector):
+        """
+        This method is called when the class is instantiated.
+        It sets up the class attributes.
+        """
         self.connector = connector
         self.resource_mapping = {}  # This will hold the mapping between Terraform resource names and cloud IDs
 
@@ -63,7 +67,10 @@ class TerraformConfigGenerator:
         }
 
     def generate_variables_tf_file(self):
-
+        """
+        This method generates the variables.tf file.
+        It hardcodes the variables that are required for the Snowflake provider.
+        """
         print("Generating variables.tf...")
         variables = [
             "snowflake_account",
@@ -87,7 +94,10 @@ class TerraformConfigGenerator:
         print("Generating variables.tf...done")
 
     def generate_providers_tf_file(self):
-
+        """
+        This method generates the providers.tf file.
+        It hardcodes the Snowflake provider.
+        """
         print("Generating providers.tf...")
         config = textwrap.dedent("""\
         terraform {
@@ -114,7 +124,13 @@ class TerraformConfigGenerator:
         print("Generating providers.tf...done")
 
     def add_missing_environment_variables_to_tfvars_file(self):
-
+        """
+        This method adds any missing environment variables to the terraform.tfvars file.
+        It takes them from the environment variables.
+        If there is no terraform.tfvars file, it creates one.
+        If there is a terraform.tfvars file, it adds any missing variables to the end of the file.
+        If a variable already exists in the file, it is not overwritten.
+        """
         print("Generating terraform.tfvars...")
         variables = {
             "snowflake_account": "",
@@ -160,32 +176,16 @@ class TerraformConfigGenerator:
         with open(self.tfvars_file_path, 'a') as f:
             f.write("\n" + config)
 
-    def _generate_resource_config_for_all_databases(self):
-
-        print("Querying Snowflake for all databases...")
-        databases = self.connector.get_all_databases()
-        print("Querying Snowflake for all databases...done")
-
-        resources = []
-        resource_type = "snowflake_database"
-
-        for database in databases:
-            resource = {
-                "type": resource_type,
-                "name": database['name'],
-                "properties": {key: database[key] for key in self.valid_properties[resource_type]["required_properties"] if key in database}
-            }
-
-            resources.append(resource)
-
-            # Add to resource mapping for terraform import
-            tf_resource_name = f"{resource['type']}.{resource['name']}"
-            self.resource_mapping[tf_resource_name] = database['name']  # Assuming the 'name' property of database is the cloud ID
-
-        return resources
-
     def _generate_resource_config_for_all_objects_of_a_resource_type(self, resource_type, get_all_func):
-    
+        """
+        This method generates the config for all objects of a given resource type.
+        It uses the get_all_func to get all objects of the given resource type.
+        It then loops through each object and generates the config for it.
+        It adds the config to the self.resources list.
+        It also adds the resource to the self.resource_mapping dictionary for terraform import.
+        It only generates config for objects that are not in the names_to_ignore list.
+        Only required properties for each resource type are added to the config.
+        """
         print(f"Querying Snowflake for all {resource_type}s...")
         all_resources = get_all_func()
         print(f"Querying Snowflake for all {resource_type}s...done")
@@ -213,7 +213,11 @@ class TerraformConfigGenerator:
         return resources
 
     def write_resource_configs_to_tf_files(self):
-
+        """
+        This method takes the self.resources list and writes the config to the target directory.
+        It writes one file per resource type.
+        It writes the config in the format that terraform expects.
+        """
         # Generate config for each resource type and write to file
         for resource_info in self.resources_to_generate:
             resource_type = resource_info["resource_type"]
@@ -234,14 +238,20 @@ class TerraformConfigGenerator:
             print(f'Generating config for {resource_type} at target/{resource_type}.tf...done')
 
     def run_terraform_init(self):
-
+        """
+        This method runs terraform init in the target directory.
+        """
         # Run terraform init
         print("Running terraform init...")
         subprocess.run(["terraform", "-chdir=target", "init"], check=True)
         print("Running terraform init...done")
 
     def import_resources(self):
-
+        """
+        This method imports the resources into the terraform state.
+        It uses the self.resource_mapping dictionary to map the resource name to the cloud ID.
+        It runs the cli command 'terraform import' for each resource.
+        """
         # Delete existing .tfstate file if it exists
         if os.path.exists(self.tfstate_file_path):
             os.remove(self.tfstate_file_path)
@@ -254,7 +264,12 @@ class TerraformConfigGenerator:
         print("Importing resources into Terraform state...done")
 
     def update_tf_files_with_optional_properties(self):
-
+        """
+        This method updates the .tf files with optional properties.
+        It uses the .tfstate file to get the optional properties.
+        It only updates the properties that are not already in the .tf file.
+        It only considers properties that are in the self.valid_properties dictionary.
+        """
         # Check if .tfstate file exists
         if not os.path.exists(self.tfstate_file_path):
             print("No .tfstate file found. Run 'import_resources' first.")

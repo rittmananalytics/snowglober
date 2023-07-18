@@ -4,6 +4,13 @@ from snowglober.snowflake_connector import SnowflakeConnector
 from generate_tf_config import TerraformConfigGenerator
 
 def main():
+    """
+    This function is the main entry point for the application.
+    It instantiates the SnowflakeConnector and TerraformConfigGenerator
+    classes, and then calls the methods to generate the Terraform configs.
+    It's also responsible for running the Terraform commands to import
+    the resources into the Terraform state.
+    """
     connector = SnowflakeConnector()
     generator = TerraformConfigGenerator(connector)
     generator.generate_variables_tf_file()
