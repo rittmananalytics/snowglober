@@ -22,6 +22,7 @@ snowglober's `.tf` file generation workflow
 1. set up `provider` and `variable` files; **variables** contain **creds** and are populated from `.env` vars
 1. query **snowflake** for all objects of each **resource type**
 1. generate `.tf` files with **resources** - at this stage only required properties are defined
+1. run `terraform init`
 1. run `terraform import` for each resource
 1. extract remaining (and optional) properties from the generated `.tfstate` file
 1. update the **resources** in the `.tf` files with the remaining properties
