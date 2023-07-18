@@ -20,6 +20,33 @@ class TerraformConfigGenerator:
             {"resource_type": "snowflake_warehouse", "generation_method": self._generate_resource_config_for_all_warehouses},
         ]
 
+        # Define valid_properties for each resource type
+        self.valid_properties = {
+            "snowflake_database": {
+                "required_properties": ["name"],
+                "optional_properties": ["comment", "data_retention_time_in_days", "from_database", 
+                                        "from_replica", "from_share", "is_transient", "replication_configuration",],
+            },
+            "snowflake_role": {
+                "required_properties": ["name",],
+                "optional_properties": ["comment",],
+            },
+            "snowflake_user": {
+                "required_properties": ["name", "login_name"],
+                "optional_properties": ["comment", "default_namespace", "default_role", "default_secondary_roles", 
+                                        "default_warehouse", "disabled", "display_name", "email", 
+                                        "first_name", "last_name", "must_change_password", 
+                                        "password", "rsa_public_key", "rsa_public_key_2",],
+            },
+            "snowflake_warehouse": {
+                "required_properties": ["name",],
+                "optional_properties": ["auto_resume", "auto_suspend", "comment", "initially_suspended", 
+                                        "max_cluster_count", "max_concurrency_level", "min_cluster_count", 
+                                        "resource_monitor", "scaling_policy", "statement_queued_timeout_in_seconds", 
+                                        "statement_timeout_in_seconds", "wait_for_provisioning", "warehouse_size",],
+            }
+        }
+
     def generate_variables_tf_file(self):
 
         print("Generating variables.tf...")
@@ -125,14 +152,13 @@ class TerraformConfigGenerator:
         print("Querying Snowflake for all databases...done")
 
         resources = []
+        resource_type = "snowflake_database"
 
         for database in databases:
             resource = {
-                "type": "snowflake_database",
+                "type": resource_type,
                 "name": database['name'],
-                "properties": {
-                    "name": database['name'],
-                }
+                "properties": {key: database[key] for key in self.valid_properties[resource_type]["required_properties"] if key in database}
             }
 
             resources.append(resource)
@@ -150,14 +176,13 @@ class TerraformConfigGenerator:
         print("Querying Snowflake for all roles...done")
 
         resources = []
+        resource_type = "snowflake_role"
 
         for role in roles:
             resource = {
-                "type": "snowflake_role",
+                "type": resource_type,
                 "name": role['name'],
-                "properties": {
-                    "name": role['name'],
-                }
+                "properties": {key: role[key] for key in self.valid_properties[resource_type]["required_properties"] if key in role}
             }
 
             resources.append(resource)
@@ -175,6 +200,7 @@ class TerraformConfigGenerator:
         print("Querying Snowflake for all users...done")
 
         resources = []
+        resource_type = "snowflake_user"
 
         for user in users:
 
@@ -183,12 +209,9 @@ class TerraformConfigGenerator:
                 continue
 
             resource = {
-                "type": "snowflake_user",
+                "type": resource_type,
                 "name": user['name'],
-                "properties": {
-                    "name": user['name'],
-                    "login_name": user['login_name'],
-                }
+                "properties": {key: user[key] for key in self.valid_properties[resource_type]["required_properties"] if key in user}
             }
             # If optional fields 'default_namespace' and 'default_secondary_roles' are present, add them to properties
             if user['default_namespace']:
@@ -212,14 +235,13 @@ class TerraformConfigGenerator:
         print("Querying Snowflake for all warehouses...done")
 
         resources = []
+        resource_type = "snowflake_warehouse"
 
         for warehouse in warehouses:
             resource = {
-                "type": "snowflake_warehouse",
+                "type": resource_type,
                 "name": warehouse['name'],
-                "properties": {
-                    "name": warehouse['name'],
-                }
+                "properties": {key: warehouse[key] for key in self.valid_properties[resource_type]["required_properties"] if key in warehouse}
             }
 
             resources.append(resource)
@@ -271,29 +293,6 @@ class TerraformConfigGenerator:
 
     def update_tf_files_with_optional_properties(self):
 
-        # Define the valid properties for each resource type
-        valid_properties = {
-            "snowflake_user": [
-                "name", "comment", "default_namespace", "default_role",
-                "default_secondary_roles", "default_warehouse", "disabled",
-                "display_name", "email", "first_name", "last_name", "login_name",
-                "must_change_password", "password", "rsa_public_key", "rsa_public_key_2"
-            ],
-            "snowflake_database": [
-                "name", "comment", "data_retention_time_in_days", "from_database", "from_replica", 
-                "from_share", "is_transient", "replication_configuration"
-            ],
-            "snowflake_role": [
-                "name", "comment"
-            ],
-            "snowflake_warehouse": [
-                "name", "auto_resume", "auto_suspend", "comment", "initially_suspended", 
-                "max_cluster_count", "max_concurrency_level", "min_cluster_count", "resource_monitor", 
-                "scaling_policy", "statement_queued_timeout_in_seconds", "statement_timeout_in_seconds", 
-                "wait_for_provisioning", "warehouse_size"
-            ]
-        }
-
         # Check if .tfstate file exists
         tfstate_file_path = 'target/terraform.tfstate'
         if not os.path.exists(tfstate_file_path):
@@ -337,7 +336,7 @@ class TerraformConfigGenerator:
                         resource_end_line_num = next((i for i, line in enumerate(tf_file_content[resource_line_num+1:], start=resource_line_num+1) if '}' in line), len(tf_file_content))
 
                         for key, value in instance_attributes.items():
-                            if key not in valid_properties.get(resource_type, []):  # Check if the property is valid
+                            if key not in self.valid_properties.get(resource_type, {}).get('optional_properties', []):  # Check if the property is valid
                                 continue
                             if value is None or (isinstance(value, list) and len(value) == 0):  # Skip properties with 'null' or empty array as value
                                 continue
