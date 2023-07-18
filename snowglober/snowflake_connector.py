@@ -6,6 +6,10 @@ from snowflake.connector import connect, DictCursor
 class SnowflakeConnector:
 
     def __init__(self):
+        """
+        This method initializes the SnowflakeConnector class and
+        loads the environment variables from the .env file.
+        """
         load_dotenv()
         self.user = os.getenv('SNOWFLAKE_USERNAME')
         self.password = os.getenv('SNOWFLAKE_PASSWORD')
@@ -17,7 +21,10 @@ class SnowflakeConnector:
         self.connection = self._connect()
 
     def _connect(self):
-        """Establishes a connection to Snowflake."""
+        """
+        This method establishes a connection to Snowflake using the
+        environment variables defined in the .env file.
+        """
         return connect(
             user=self.user,
             password=self.password,
@@ -29,6 +36,10 @@ class SnowflakeConnector:
         )
 
     def _execute_query(self, query):
+        """
+        This method executes a query against Snowflake and returns
+        the results.
+        """
         cur = self.connection.cursor(DictCursor)
         try:
             cur.execute(query)
@@ -36,18 +47,20 @@ class SnowflakeConnector:
         finally:
             cur.close()
 
-    def get_all_databases(self):
-        query = "show databases"
-        return self._execute_query(query)
-    
-    def get_all_roles(self):
-        query = "show roles"
-        return self._execute_query(query)
+    def get_all_objects_of_a_resource_type(self, entity):
+        """
+        This method returns a list of all instances of the specified entity in Snowflake.
+        The entity should be one of: databases, roles, users, warehouses.
+        """
+        valid_entities = [
+            'databases',
+            'roles',
+            'users',
+            'warehouses',
+            ]
 
-    def get_all_users(self):
-        query = "show users"
-        return self._execute_query(query)
+        if entity not in valid_entities:
+            raise ValueError(f"Invalid entity '{entity}'. Choose one of {valid_entities}")
 
-    def get_all_warehouses(self):
-        query = "show warehouses"
+        query = f"show {entity}"
         return self._execute_query(query)
