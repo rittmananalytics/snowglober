@@ -31,9 +31,10 @@ class TerraformConfigGenerator:
             {"resource_type": "snowflake_warehouse", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('warehouses')}
         ]
 
-        # Define valid_properties for each resource type TODO RENAME DICT?
-        self.valid_properties = {
+        # Define importing_parameters for each resource type
+        self.importing_parameters = {
             "snowflake_database": {
+                "import_id_format": "{name}",
                 "required_properties": ["name"],
                 "optional_properties": ["comment", "data_retention_time_in_days", "from_database", 
                                         "from_replica", "from_share", "is_transient", "replication_configuration",
@@ -41,11 +42,13 @@ class TerraformConfigGenerator:
                 "names_to_ignore": [],
             },
             "snowflake_role": {
+                "import_id_format": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["comment",],
                 "names_to_ignore": [],
             },
             "snowflake_user": {
+                "import_id_format": "{name}",
                 "required_properties": ["name", "login_name"],
                 "optional_properties": ["comment", "default_namespace", "default_role", "default_secondary_roles", 
                                         "default_warehouse", "disabled", "display_name", "email", 
@@ -54,6 +57,7 @@ class TerraformConfigGenerator:
                 "names_to_ignore": ["SNOWFLAKE"],
             },
             "snowflake_warehouse": {
+                "import_id_format": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["auto_resume", "auto_suspend", "comment", "initially_suspended", 
                                         "max_cluster_count", "max_concurrency_level", "min_cluster_count", 
@@ -194,20 +198,24 @@ class TerraformConfigGenerator:
         for resource in all_resources:
 
             # Don't generate config for any resource in names_to_ignore
-            if resource['name'].upper() in map(str.upper, self.valid_properties[resource_type]["names_to_ignore"]):
+            if resource['name'].upper() in map(str.upper, self.importing_parameters[resource_type]["names_to_ignore"]):
                 continue
 
             config_resource = {
                 "type": resource_type,
                 "name": resource['name'],
-                "properties": {key: resource[key] for key in self.valid_properties[resource_type]["required_properties"] if key in resource}
+                "properties": {key: resource[key] for key in self.importing_parameters[resource_type]["required_properties"] if key in resource}
             }
 
             resources.append(config_resource)
 
+            # Generate cloud ID for resource
+            import_id_format = self.importing_parameters[resource_type]["import_id_format"]
+            cloud_id = import_id_format.format(**resource)
+
             # Add to resource mapping for terraform import
             tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
-            self.resource_mapping[tf_resource_name] = resource['name']  # Assuming the 'name' property of resource is the cloud ID
+            self.resource_mapping[tf_resource_name] = cloud_id
 
         return resources
 
@@ -269,7 +277,7 @@ class TerraformConfigGenerator:
         This method updates the .tf files with optional properties.
         It uses the .tfstate file to get the optional properties.
         It only updates the properties that are not already in the .tf file.
-        It only considers properties that are in the self.valid_properties dictionary.
+        It only considers properties that are in the self.importing_parameters dictionary.
         """
         # Check if .tfstate file exists
         if not os.path.exists(self.tfstate_file_path):
@@ -314,7 +322,7 @@ class TerraformConfigGenerator:
 
                         # Loop through each property in the .tfstate and add it to the .tf file if it doesn't already exist
                         for key, value in instance_attributes.items():
-                            if key not in self.valid_properties.get(resource_type, {}).get('optional_properties', []):  # Check if the property is valid
+                            if key not in self.importing_parameters.get(resource_type, {}).get('optional_properties', []):  # Check if the property is valid
                                 continue
                             if isinstance(value, list) and len(value) == 0:  # Skip properties with empty array as value
                                 continue
