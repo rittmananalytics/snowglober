@@ -259,9 +259,9 @@ class TerraformConfigGenerator:
         # Import resources into Terraform state
         print("Importing all resources into Terraform state...")
         for resource_name, resource_id in self.resource_mapping.items():
-            print(f"Importing {resource_name}...")
+            print(f"Importing {resource_name} by running 'terraform import {resource_name} {resource_id}'...")
             subprocess.run(["terraform", "-chdir=target", "import", resource_name, resource_id], check=True)
-            print(f"Importing {resource_name}...done")
+            print(f"Importing {resource_name} by running 'terraform import {resource_name} {resource_id}'...done")
         print("Importing resources into Terraform state...done")
 
     def update_tf_files_with_optional_properties(self):
