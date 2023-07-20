@@ -1,7 +1,7 @@
 # bootstrapping file; the orchestrator of the application
 
 from snowglober.snowflake_connector import SnowflakeConnector
-from generate_tf_config import TerraformConfigGenerator
+from generate_config_files import TerraformConfigGenerator
 
 def main():
     """
