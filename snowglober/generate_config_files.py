@@ -31,8 +31,6 @@ class TerraformConfigGenerator:
             {"resource_type": "snowflake_warehouse", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('warehouses')}
         ]
 
-
-
         # Define valid_properties for each resource type TODO RENAME DICT?
         self.valid_properties = {
             "snowflake_database": {
@@ -209,7 +207,8 @@ class TerraformConfigGenerator:
 
             # Add to resource mapping for terraform import
             tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
-            self.resource_mapping[tf_resource_name] = resource['name']  # Assuming the 'name' property of resource is the cloud ID
+            first_required_property = self.valid_properties[resource_type]["required_properties"][0]
+            self.resource_mapping[tf_resource_name] = resource[first_required_property]
 
         return resources
 
@@ -259,9 +258,11 @@ class TerraformConfigGenerator:
             print(f"Deleted existing {self.tfstate_file_path} file.")
 
         # Import resources into Terraform state
-        print("Importing resources into Terraform state...")
+        print("Importing all resources into Terraform state...")
         for resource_name, resource_id in self.resource_mapping.items():
+            print(f"Importing {resource_name}...")
             subprocess.run(["terraform", "-chdir=target", "import", resource_name, resource_id], check=True)
+            print(f"Importing {resource_name}...done")
         print("Importing resources into Terraform state...done")
 
     def update_tf_files_with_optional_properties(self):
