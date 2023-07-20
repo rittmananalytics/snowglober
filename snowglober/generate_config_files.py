@@ -207,8 +207,7 @@ class TerraformConfigGenerator:
 
             # Add to resource mapping for terraform import
             tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
-            first_required_property = self.valid_properties[resource_type]["required_properties"][0]
-            self.resource_mapping[tf_resource_name] = resource[first_required_property]
+            self.resource_mapping[tf_resource_name] = resource['name']  # Assuming the 'name' property of resource is the cloud ID
 
         return resources
 
