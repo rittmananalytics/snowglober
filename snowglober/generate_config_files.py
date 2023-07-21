@@ -35,7 +35,7 @@ class TerraformConfigGenerator:
         # Define importing_parameters for each resource type
         self.importing_parameters = {
             "snowflake_database": {
-                "import_id_format": "{name}",
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name"],
                 "optional_properties": ["comment", "data_retention_time_in_days", "from_database", 
                                         "from_replica", "from_share", "is_transient", "replication_configuration",
@@ -44,14 +44,14 @@ class TerraformConfigGenerator:
                 "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_role": {
-                "import_id_format": "{name}",
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["comment",],
                 "names_to_ignore": [],
                 "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_schema": {
-                "import_id_format": "{database_name}|{name}",
+                "import_id_format_using_snowflake_syntax": "{database_name}|{name}",
                 "required_properties": ["database", "name"],
                 "optional_properties": ["comment", "data_retention_days", "is_managed", 
                                         "is_transient"],
@@ -59,7 +59,7 @@ class TerraformConfigGenerator:
                 "terraform_to_snowflake_api_key_mapping": {"database": "database_name"},
             },
             "snowflake_user": {
-                "import_id_format": "{name}",
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name", "login_name"],
                 "optional_properties": ["comment", "default_namespace", "default_role", "default_secondary_roles", 
                                         "default_warehouse", "disabled", "display_name", "email", 
@@ -69,7 +69,7 @@ class TerraformConfigGenerator:
                 "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_warehouse": {
-                "import_id_format": "{name}",
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["auto_resume", "auto_suspend", "comment", "initially_suspended", 
                                         "max_cluster_count", "max_concurrency_level", "min_cluster_count", 
@@ -232,8 +232,8 @@ class TerraformConfigGenerator:
             resources.append(config_resource)
 
             # Generate cloud ID for resource
-            import_id_format = self.importing_parameters[resource_type]["import_id_format"]
-            cloud_id = import_id_format.format(**snowflake_resource)
+            import_id_format_using_snowflake_syntax = self.importing_parameters[resource_type]["import_id_format_using_snowflake_syntax"]
+            cloud_id = import_id_format_using_snowflake_syntax.format(**snowflake_resource)
 
             # Add to resource mapping for terraform import
             tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
