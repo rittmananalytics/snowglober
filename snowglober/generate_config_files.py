@@ -217,9 +217,6 @@ class TerraformConfigGenerator:
             # Generate properties dictionary with key translated from api response to terraform syntax e.g. database_name -> database
             properties = {}
             for key in self.importing_parameters[resource_type]["required_properties"]:
-                print(f'key: {key}')
-                print(f'key mapping1: {"terraform_to_snowflake_api_key_mapping" in self.importing_parameters[resource_type]}')
-                print(f'key mapping2: {key in self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"]}')
                 if key in snowflake_resource:
                     properties[key] = snowflake_resource[key]
                 elif "terraform_to_snowflake_api_key_mapping" in self.importing_parameters[resource_type] and key in self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"]:
