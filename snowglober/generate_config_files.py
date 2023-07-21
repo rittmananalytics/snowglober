@@ -27,8 +27,6 @@ class TerraformConfigGenerator:
         self.resources_to_generate = [
             {"resource_type": "snowflake_database", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('databases')},
             {"resource_type": "snowflake_role", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('roles')},
-            {"resource_type": "snowflake_schema", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('schemas')},
-            # {"resource_type": "snowflake_table", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('tables')},
             {"resource_type": "snowflake_user", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('users')},
             {"resource_type": "snowflake_warehouse", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('warehouses')}
         ]
@@ -51,21 +49,6 @@ class TerraformConfigGenerator:
                 "names_to_ignore": [],
                 "terraform_to_snowflake_api_key_mapping": [],
             },
-            "snowflake_schema": {
-                "import_id_format_using_snowflake_syntax": "{database_name}|{name}",
-                "required_properties": ["database", "name"],
-                "optional_properties": ["comment", "data_retention_days", "is_managed", 
-                                        "is_transient"],
-                "names_to_ignore": [],
-                "terraform_to_snowflake_api_key_mapping": {"database": "database_name"},
-            },
-            # "snowflake_table": {
-            #     "import_id_format_using_snowflake_syntax": "{database_name}|{schema_name}|{name}",
-            #     "required_properties": ["database", "schema", "name", "column"],
-            #     "optional_properties": ["change_tracking", "cluster_by", "comment", "data_retention_days", "primary_key", "tag"],
-            #     "names_to_ignore": [],
-            #     "terraform_to_snowflake_api_key_mapping": {"database": "database_name", "schema": "schema_name"},
-            # },
             "snowflake_user": {
                 "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name", "login_name"],
