@@ -26,6 +26,7 @@ class TerraformConfigGenerator:
         # Define resources_to_generate as an instance attribute
         self.resources_to_generate = [
             {"resource_type": "snowflake_database", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('databases')},
+            {"resource_type": "snowflake_schema", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('schemas')},
             {"resource_type": "snowflake_role", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('roles')},
             {"resource_type": "snowflake_user", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('users')},
             {"resource_type": "snowflake_warehouse", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('warehouses')}
@@ -40,12 +41,22 @@ class TerraformConfigGenerator:
                                         "from_replica", "from_share", "is_transient", "replication_configuration",
                                         "from_database", "is_transient",],
                 "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_role": {
                 "import_id_format": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["comment",],
                 "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": [],
+            },
+            "snowflake_schema": {
+                "import_id_format": "{database_name}|{name}",
+                "required_properties": ["database", "name"],
+                "optional_properties": ["comment", "data_retention_days", "is_managed", 
+                                        "is_transient"],
+                "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": {"database": "database_name"},
             },
             "snowflake_user": {
                 "import_id_format": "{name}",
@@ -55,6 +66,7 @@ class TerraformConfigGenerator:
                                         "first_name", "last_name", "must_change_password", 
                                         "password", "rsa_public_key", "rsa_public_key_2", "tag",],
                 "names_to_ignore": ["SNOWFLAKE"],
+                "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_warehouse": {
                 "import_id_format": "{name}",
@@ -66,6 +78,7 @@ class TerraformConfigGenerator:
                                         "enable_query_acceleration", "query_acceleration_max_scale_factor",
                                         "warehouse_type",],
                 "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": [],
             }
         }
 
@@ -179,10 +192,10 @@ class TerraformConfigGenerator:
         with open(self.tfvars_file_path, 'a') as f:
             f.write("\n" + config)
 
-    def _generate_resource_config_for_all_objects_of_a_resource_type(self, resource_type, get_all_func):
+    def _generate_resource_config_for_all_objects_of_a_resource_type(self, resource_type, query_snowflake_for_all_objects_of_a_resource_type):
         """
         This method generates the config for all objects of a given resource type.
-        It uses the get_all_func to get all objects of the given resource type.
+        It uses the query_snowflake_for_all_objects_of_a_resource_type to get all objects of the given resource type.
         It then loops through each object and generates the config for it.
         It adds the config to the self.resources list.
         It also adds the resource to the self.resource_mapping dictionary for terraform import.
@@ -190,28 +203,40 @@ class TerraformConfigGenerator:
         Only required properties for each resource type are added to the config.
         """
         print(f"Querying Snowflake for all {resource_type}s...")
-        all_resources = get_all_func()
+        all_snowflake_resources = query_snowflake_for_all_objects_of_a_resource_type()
         print(f"Querying Snowflake for all {resource_type}s...done")
 
         resources = []
 
-        for resource in all_resources:
+        for snowflake_resource in all_snowflake_resources:
 
-            # Don't generate config for any resource in names_to_ignore
-            if resource['name'].upper() in map(str.upper, self.importing_parameters[resource_type]["names_to_ignore"]):
+            # Don't generate config for any snowflake_resource in names_to_ignore
+            if snowflake_resource['name'].upper() in map(str.upper, self.importing_parameters[resource_type]["names_to_ignore"]):
                 continue
+
+            # Generate properties dictionary with key translated from api response to terraform syntax e.g. database_name -> database
+            properties = {}
+            for key in self.importing_parameters[resource_type]["required_properties"]:
+                print(f'key: {key}')
+                print(f'key mapping1: {"terraform_to_snowflake_api_key_mapping" in self.importing_parameters[resource_type]}')
+                print(f'key mapping2: {key in self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"]}')
+                if key in snowflake_resource:
+                    properties[key] = snowflake_resource[key]
+                elif "terraform_to_snowflake_api_key_mapping" in self.importing_parameters[resource_type] and key in self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"]:
+                    api_key = self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"][key]
+                    if api_key in snowflake_resource:
+                        properties[key] = snowflake_resource[api_key]
 
             config_resource = {
                 "type": resource_type,
-                "name": resource['name'],
-                "properties": {key: resource[key] for key in self.importing_parameters[resource_type]["required_properties"] if key in resource}
+                "name": snowflake_resource['name'],
+                "properties": properties
             }
-
             resources.append(config_resource)
 
             # Generate cloud ID for resource
             import_id_format = self.importing_parameters[resource_type]["import_id_format"]
-            cloud_id = import_id_format.format(**resource)
+            cloud_id = import_id_format.format(**snowflake_resource)
 
             # Add to resource mapping for terraform import
             tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
