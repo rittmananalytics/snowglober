@@ -52,15 +52,5 @@ class SnowflakeConnector:
         This method returns a list of all instances of the specified entity in Snowflake.
         The entity should be one of: databases, roles, users, warehouses.
         """
-        valid_entities = [
-            'databases',
-            'roles',
-            'users',
-            'warehouses',
-            ]
-
-        if entity not in valid_entities:
-            raise ValueError(f"Invalid entity '{entity}'. Choose one of {valid_entities}")
-
         query = f"show {entity}"
         return self._execute_query(query)

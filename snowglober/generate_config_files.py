@@ -31,31 +31,36 @@ class TerraformConfigGenerator:
             {"resource_type": "snowflake_warehouse", "api_call": lambda: self.connector.get_all_objects_of_a_resource_type('warehouses')}
         ]
 
-
-
-        # Define valid_properties for each resource type TODO RENAME DICT?
-        self.valid_properties = {
+        # Define importing_parameters for each resource type
+        self.importing_parameters = {
             "snowflake_database": {
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name"],
                 "optional_properties": ["comment", "data_retention_time_in_days", "from_database", 
                                         "from_replica", "from_share", "is_transient", "replication_configuration",
                                         "from_database", "is_transient",],
                 "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_role": {
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["comment",],
                 "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_user": {
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name", "login_name"],
                 "optional_properties": ["comment", "default_namespace", "default_role", "default_secondary_roles", 
                                         "default_warehouse", "disabled", "display_name", "email", 
                                         "first_name", "last_name", "must_change_password", 
                                         "password", "rsa_public_key", "rsa_public_key_2", "tag",],
                 "names_to_ignore": ["SNOWFLAKE"],
+                "terraform_to_snowflake_api_key_mapping": [],
             },
             "snowflake_warehouse": {
+                "import_id_format_using_snowflake_syntax": "{name}",
                 "required_properties": ["name",],
                 "optional_properties": ["auto_resume", "auto_suspend", "comment", "initially_suspended", 
                                         "max_cluster_count", "max_concurrency_level", "min_cluster_count", 
@@ -64,6 +69,7 @@ class TerraformConfigGenerator:
                                         "enable_query_acceleration", "query_acceleration_max_scale_factor",
                                         "warehouse_type",],
                 "names_to_ignore": [],
+                "terraform_to_snowflake_api_key_mapping": [],
             }
         }
 
@@ -177,10 +183,10 @@ class TerraformConfigGenerator:
         with open(self.tfvars_file_path, 'a') as f:
             f.write("\n" + config)
 
-    def _generate_resource_config_for_all_objects_of_a_resource_type(self, resource_type, get_all_func):
+    def _generate_resource_config_for_all_objects_of_a_resource_type(self, resource_type, query_snowflake_for_all_objects_of_a_resource_type):
         """
         This method generates the config for all objects of a given resource type.
-        It uses the get_all_func to get all objects of the given resource type.
+        It uses the query_snowflake_for_all_objects_of_a_resource_type to get all objects of the given resource type.
         It then loops through each object and generates the config for it.
         It adds the config to the self.resources list.
         It also adds the resource to the self.resource_mapping dictionary for terraform import.
@@ -188,28 +194,41 @@ class TerraformConfigGenerator:
         Only required properties for each resource type are added to the config.
         """
         print(f"Querying Snowflake for all {resource_type}s...")
-        all_resources = get_all_func()
+        all_snowflake_resources = query_snowflake_for_all_objects_of_a_resource_type()
         print(f"Querying Snowflake for all {resource_type}s...done")
 
         resources = []
 
-        for resource in all_resources:
+        for snowflake_resource in all_snowflake_resources:
 
-            # Don't generate config for any resource in names_to_ignore
-            if resource['name'].upper() in map(str.upper, self.valid_properties[resource_type]["names_to_ignore"]):
+            # Don't generate config for any snowflake_resource in names_to_ignore
+            if snowflake_resource['name'].upper() in map(str.upper, self.importing_parameters[resource_type]["names_to_ignore"]):
                 continue
+
+            # Generate properties dictionary with key translated from api response to terraform syntax e.g. database_name -> database
+            properties = {}
+            for key in self.importing_parameters[resource_type]["required_properties"]:
+                if key in snowflake_resource:
+                    properties[key] = snowflake_resource[key]
+                elif "terraform_to_snowflake_api_key_mapping" in self.importing_parameters[resource_type] and key in self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"]:
+                    api_key = self.importing_parameters[resource_type]["terraform_to_snowflake_api_key_mapping"][key]
+                    if api_key in snowflake_resource:
+                        properties[key] = snowflake_resource[api_key]
 
             config_resource = {
                 "type": resource_type,
-                "name": resource['name'],
-                "properties": {key: resource[key] for key in self.valid_properties[resource_type]["required_properties"] if key in resource}
+                "name": snowflake_resource['name'],
+                "properties": properties
             }
-
             resources.append(config_resource)
+
+            # Generate cloud ID for resource
+            import_id_format_using_snowflake_syntax = self.importing_parameters[resource_type]["import_id_format_using_snowflake_syntax"]
+            cloud_id = import_id_format_using_snowflake_syntax.format(**snowflake_resource)
 
             # Add to resource mapping for terraform import
             tf_resource_name = f"{config_resource['type']}.{config_resource['name']}"
-            self.resource_mapping[tf_resource_name] = resource['name']  # Assuming the 'name' property of resource is the cloud ID
+            self.resource_mapping[tf_resource_name] = cloud_id
 
         return resources
 
@@ -259,9 +278,11 @@ class TerraformConfigGenerator:
             print(f"Deleted existing {self.tfstate_file_path} file.")
 
         # Import resources into Terraform state
-        print("Importing resources into Terraform state...")
+        print("Importing all resources into Terraform state...")
         for resource_name, resource_id in self.resource_mapping.items():
+            print(f"Importing {resource_name} by running 'terraform import {resource_name} {resource_id}'...")
             subprocess.run(["terraform", "-chdir=target", "import", resource_name, resource_id], check=True)
+            print(f"Importing {resource_name} by running 'terraform import {resource_name} {resource_id}'...done")
         print("Importing resources into Terraform state...done")
 
     def update_tf_files_with_optional_properties(self):
@@ -269,7 +290,7 @@ class TerraformConfigGenerator:
         This method updates the .tf files with optional properties.
         It uses the .tfstate file to get the optional properties.
         It only updates the properties that are not already in the .tf file.
-        It only considers properties that are in the self.valid_properties dictionary.
+        It only considers properties that are in the self.importing_parameters dictionary.
         """
         # Check if .tfstate file exists
         if not os.path.exists(self.tfstate_file_path):
@@ -314,7 +335,7 @@ class TerraformConfigGenerator:
 
                         # Loop through each property in the .tfstate and add it to the .tf file if it doesn't already exist
                         for key, value in instance_attributes.items():
-                            if key not in self.valid_properties.get(resource_type, {}).get('optional_properties', []):  # Check if the property is valid
+                            if key not in self.importing_parameters.get(resource_type, {}).get('optional_properties', []):  # Check if the property is valid
                                 continue
                             if isinstance(value, list) and len(value) == 0:  # Skip properties with empty array as value
                                 continue
